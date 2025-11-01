@@ -183,6 +183,14 @@ The `FileDevice` implements a write-back cache:
 - Flush commands write dirty pages to the storage backend
 - Non-existent pages return zeros
 
+
+### Dependencies
+
+- Go 1.23+
+- AWS SDK for Go v2
+- S3-compatible storage (AWS S3, MinIO, etc.)
+- Linux NBD client for testing
+
 ## License
 
 MIT

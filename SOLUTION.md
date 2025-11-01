@@ -86,7 +86,7 @@ This is an implementation of a Network Block Device (NBD) server that durably pe
 - Interface defined in `internal/store/types.go`
 
 
-### Additional Features & Stretch Goals Implemented
+### Additional Features
 
 #### 1. Tiered Caching (Lazy Load + Write-Back)
 - In-memory page cache within `FileDevice` supports **lazy loading** from S3 on demand, minimizing unnecessary reads.  
@@ -176,28 +176,3 @@ Successfully tested with:
 **Network:**
 - NBD protocol overhead: minimal
 - S3 traffic: proportional to pages read/written
-
-## How to Run
-
-See [README.md](README.md) for complete setup and testing instructions.
-
-Quick start:
-```bash
-# Build
-go build -o nbds3d ./cmd/nbds3d
-
-# Run with S3 storage
-./nbds3d \
-  --s3-bucket=my-bucket \
-  --s3-region=us-east-1 \
-  --s3-endpoint=http://localhost:9000 \
-  --s3-access-key=minioadmin \
-  --s3-secret-key=minioadmin
-```
-
-## Dependencies
-
-- Go 1.23+
-- AWS SDK for Go v2
-- S3-compatible storage (AWS S3, MinIO, etc.)
-- Linux NBD client for testing
