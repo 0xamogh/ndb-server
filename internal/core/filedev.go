@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"log"
 	"sync"
 
 	"nbds3d/internal/store"
@@ -11,14 +12,14 @@ type FileDevice struct {
 	name     string
 	size     int64
 	pageSize uint64
-	st       *store.FSStore
+	st       store.Store
 
 	mu    sync.RWMutex
 	pages map[uint64][]byte
 	dirty map[uint64]bool
 }
 
-func NewFileDevice(name string, size int64, pageSize uint64, st *store.FSStore) *FileDevice {
+func NewFileDevice(name string, size int64, pageSize uint64, st store.Store) *FileDevice {
 	return &FileDevice{
 		name:     name,
 		size:     size,
@@ -127,17 +128,26 @@ func (f *FileDevice) Flush() error {
 	}
 	f.mu.RUnlock()
 
+	if len(dirtyCopy) > 0 {
+		log.Printf("filedev: flushing %d dirty pages for export %s", len(dirtyCopy), f.name)
+	}
+
 	for _, idx := range dirtyCopy {
 		f.mu.RLock()
 		page := f.pages[idx]
 		f.mu.RUnlock()
 		addr := store.PageAddress{Export: f.name, Index: idx, Size: f.pageSize}
 		if err := f.st.WritePage(context.Background(), addr, page); err != nil {
+			log.Printf("filedev: error writing page %d: %v", idx, err)
 			return err
 		}
 		f.mu.Lock()
 		delete(f.dirty, idx)
 		f.mu.Unlock()
+	}
+
+	if len(dirtyCopy) > 0 {
+		log.Printf("filedev: flush complete")
 	}
 	return nil
 }

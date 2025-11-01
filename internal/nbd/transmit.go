@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"log"
 
 	"nbds3d/internal/core"
 )
@@ -100,7 +101,9 @@ func transmit(br *bufio.Reader, bw *bufio.Writer, dev core.Device) error {
 			}
 
 		case NBD_CMD_FLUSH:
+			log.Printf("nbd: received flush command")
 			if err := dev.Flush(); err != nil {
+				log.Printf("nbd: flush error: %v", err)
 				if err := writeSimpleReply(bw, NBD_EIO, cookie, nil); err != nil {
 					return err
 				}
@@ -109,6 +112,7 @@ func transmit(br *bufio.Reader, bw *bufio.Writer, dev core.Device) error {
 			if err := writeSimpleReply(bw, 0, cookie, nil); err != nil {
 				return err
 			}
+			log.Printf("nbd: flush completed successfully")
 
 		case NBD_CMD_DISC:
 			return nil

@@ -20,7 +20,7 @@ func ServeConn(c net.Conn, cfg Config, newDev func(name string, size uint64) cor
 	defer bw.Flush()
 
 	if err := writeU64(bw, NBDMAGIC); err != nil {
-		return err
+		return fmt.Errorf("writeU64 NBDMAGIC: %w", err)
 	}
 	if err := writeU64(bw, IHAVEOPT); err != nil {
 		return err
@@ -42,7 +42,7 @@ func ServeConn(c net.Conn, cfg Config, newDev func(name string, size uint64) cor
 	for {
 		magic, err := readU64(br)
 		if err != nil {
-			return err
+			return fmt.Errorf("option loop readU64: %w", err)
 		}
 		if magic != IHAVEOPT {
 			return fmt.Errorf("bad option magic: 0x%x", magic)
@@ -50,15 +50,15 @@ func ServeConn(c net.Conn, cfg Config, newDev func(name string, size uint64) cor
 
 		opt, err := readU32(br)
 		if err != nil {
-			return err
+			return fmt.Errorf("readU32 opt: %w", err)
 		}
 		olen, err := readU32(br)
 		if err != nil {
-			return err
+			return fmt.Errorf("readU32 olen: %w", err)
 		}
 		data, err := readN(br, int(olen))
 		if err != nil {
-			return err
+			return fmt.Errorf("readN data: %w", err)
 		}
 
 		switch opt {
