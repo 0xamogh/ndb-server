@@ -172,7 +172,3 @@ Successfully tested with:
 - Proportional to number of accessed pages
 - Each page: `chunk-size` bytes (default 4MB)
 - Dirty pages retained until flush
-
-**Network:**
-- NBD protocol overhead: minimal
-- S3 traffic: proportional to pages read/written
