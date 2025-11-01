@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"nbds3d/internal/core"
 	"net"
 )
 
@@ -12,7 +13,7 @@ const (
 	NBD_INFO_EXPORT = 0
 )
 
-func ServeConn(c net.Conn, cfg Config) error {
+func ServeConn(c net.Conn, cfg Config, newDev func(name string, size uint64) core.Device) error {
 	br := bufio.NewReader(c)
 	bw := bufio.NewWriter(c)
 	defer c.Close()
@@ -70,32 +71,25 @@ func ServeConn(c net.Conn, cfg Config) error {
 
 		case NBD_OPT_GO:
 			if len(data) < 6 {
-				if err := writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("short GO")); err != nil {
-					return err
-				}
+				_ = writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("short GO"))
 				continue
 			}
 			rd := bytes.NewReader(data)
 			nameLen, _ := readU32(rd)
 			if int(nameLen)+6 > len(data) {
-				if err := writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("bad nameLen")); err != nil {
-					return err
-				}
+				_ = writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("bad nameLen"))
 				continue
 			}
 			name := make([]byte, nameLen)
 			if _, err := io.ReadFull(rd, name); err != nil {
-				if err := writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("name read")); err != nil {
-					return err
-				}
+				_ = writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("name read"))
 				continue
 			}
 			exportName = string(name)
+
 			infoCount, _ := readU16(rd)
 			if _, err := io.CopyN(io.Discard, rd, int64(infoCount*2)); err != nil && err != io.EOF {
-				if err := writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("info read")); err != nil {
-					return err
-				}
+				_ = writeReply(bw, opt, NBD_REP_ERR_INVALID, []byte("info read"))
 				continue
 			}
 
@@ -110,7 +104,9 @@ func ServeConn(c net.Conn, cfg Config) error {
 				return err
 			}
 
-			return transmit(br, bw, exportName, exportSize, cfg)
+			dev := newDev(exportName, exportSize)
+			defer dev.Close()
+			return transmit(br, bw, dev)
 
 		default:
 			if err := writeReply(bw, opt, NBD_REP_ERR_UNSUP, nil); err != nil {

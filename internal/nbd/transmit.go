@@ -26,13 +26,7 @@ func writeSimpleReply(w *bufio.Writer, errCode uint32, cookie uint64, payload []
 	return w.Flush()
 }
 
-func transmit(br *bufio.Reader, bw *bufio.Writer, exportName string, exportSize uint64, cfg Config) error {
-	dev, err := core.OpenOrCreate(exportName, exportSize)
-	if err != nil {
-		return err
-	}
-	defer dev.Close()
-
+func transmit(br *bufio.Reader, bw *bufio.Writer, dev core.Device) error {
 	for {
 		magic, err := readU32(br)
 		if err != nil {
@@ -74,8 +68,6 @@ func transmit(br *bufio.Reader, bw *bufio.Writer, exportName string, exportSize 
 				continue
 			}
 			buf := make([]byte, length)
-			if _, err := io.ReadFull(bytesReaderZero{}, buf[:0]); err != nil { /* no-op to avoid import */
-			}
 			if _, err := dev.ReadAt(buf, int64(off)); err != nil {
 				if err := writeSimpleReply(bw, NBD_EIO, cookie, nil); err != nil {
 					return err
@@ -92,7 +84,6 @@ func transmit(br *bufio.Reader, bw *bufio.Writer, exportName string, exportSize 
 				return err
 			}
 			if int64(off)+int64(length) > dev.Size() {
-				// discard already-read data; respond error
 				if err := writeSimpleReply(bw, NBD_ENOSPC, cookie, nil); err != nil {
 					return err
 				}
@@ -129,8 +120,3 @@ func transmit(br *bufio.Reader, bw *bufio.Writer, exportName string, exportSize 
 		}
 	}
 }
-
-// tiny hack to avoid unused import for io during build; no actual read.
-type bytesReaderZero struct{}
-
-func (bytesReaderZero) Read(p []byte) (int, error) { return 0, io.EOF }

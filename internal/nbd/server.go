@@ -2,13 +2,17 @@ package nbd
 
 import (
 	"log"
+	"nbds3d/internal/core"
+	"nbds3d/internal/store"
 	"net"
+	"path/filepath"
 )
 
 type Config struct {
 	Addr        string
 	DefaultSize uint64
 	ChunkSize   uint64
+	DataDir     string
 }
 
 func Run(cfg Config) error {
@@ -20,19 +24,23 @@ func Run(cfg Config) error {
 
 	log.Printf("nbd: listening on %s (defaultSize=%d, chunkSize=%d)", cfg.Addr, cfg.DefaultSize, cfg.ChunkSize)
 
+	st := store.NewFSStore(filepath.Join(cfg.DataDir, "exports"))
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				log.Printf("nbd: temporary accept error: %v", err)
-				continue
-			}
-			return err
+			log.Printf("nbd: accept error: %v", err)
+			continue
 		}
 
 		go func(c net.Conn) {
 			defer c.Close()
-			if err := ServeConn(c, cfg); err != nil {
+
+			newDevice := func(name string, size uint64) core.Device {
+				return core.NewFileDevice(name, int64(size), cfg.ChunkSize, st)
+			}
+
+			if err := ServeConn(c, cfg, newDevice); err != nil {
 				log.Printf("nbd: connection %s error: %v", c.RemoteAddr(), err)
 			}
 		}(conn)

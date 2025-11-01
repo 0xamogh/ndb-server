@@ -146,7 +146,15 @@ func (m *MemDevice) WriteAt(p []byte, off int64) (int, error) {
 	return n, nil
 }
 
-func (m *MemDevice) Flush(ctx context.Context) error {
+func (m *MemDevice) Close() error {
+	return nil
+}
+
+func (m *MemDevice) Flush() error {
+	return m.FlushWithContext(context.Background())
+}
+
+func (m *MemDevice) FlushWithContext(ctx context.Context) error {
 	if m.st == nil {
 		m.mu.Lock()
 		for k := range m.dirty {
