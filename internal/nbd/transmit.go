@@ -37,11 +37,10 @@ func transmit(br *bufio.Reader, bw *bufio.Writer, dev core.Device) error {
 			return errors.New("bad request magic")
 		}
 
-		cmdFlags, err := readU16(br)
+		_, err = readU16(br) // cmdFlags - not currently used
 		if err != nil {
 			return err
 		}
-		_ = cmdFlags
 		typ, err := readU16(br)
 		if err != nil {
 			return err

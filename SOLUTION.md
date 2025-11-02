@@ -12,7 +12,7 @@ This is an implementation of a Network Block Device (NBD) server that durably pe
 | Fixed newstyle handshake | NBD_OPT_GO and NBD_OPT_ABORT | `internal/nbd/handshake.go` |
 | Arbitrary export names | Each export isolated in S3 | `internal/store/s3store.go:64` |
 | Durable S3 persistence | All data stored in S3 | `internal/store/s3store.go` |
-| Proper flush semantics | Write-back cache with flush | `internal/core/filedev.go:122-152` |
+| Proper flush semantics | Write-back cache with flush | `internal/core/memdev.go:153-197` |
 
 ## Architecture
 
@@ -39,10 +39,11 @@ This is an implementation of a Network Block Device (NBD) server that durably pe
 │  └────────────┬───────────────────┘    │
 │               │                         │
 │  ┌────────────▼───────────────────┐    │
-│  │  FileDevice (filedev.go)       │    │
+│  │  MemDevice (memdev.go)         │    │
 │  │  - Page cache (in-memory)      │    │
 │  │  - Lazy loading                │    │
 │  │  - Dirty page tracking         │    │
+│  │  - Batch flushing              │    │
 │  └────────────┬───────────────────┘    │
 │               │                         │
 │  ┌────────────▼───────────────────┐    │
@@ -89,9 +90,10 @@ This is an implementation of a Network Block Device (NBD) server that durably pe
 ### Additional Features
 
 #### 1. Tiered Caching (Lazy Load + Write-Back)
-- In-memory page cache within `FileDevice` supports **lazy loading** from S3 on demand, minimizing unnecessary reads.  
-- Implements **write-back caching** that batches in-memory writes before flushing to S3, reducing PUT operations.  
-- **Implementation:** `internal/core/filedev.go:34–120`
+- In-memory page cache within `MemDevice` supports **lazy loading** from S3 on demand, minimizing unnecessary reads.
+- Implements **write-back caching** that batches in-memory writes before flushing to S3, reducing PUT operations.
+- Includes proper read-modify-write semantics to prevent data corruption on partial page writes.
+- **Implementation:** `internal/core/memdev.go:43-197`
 
 #### 2. Pluggable Storage Backends
 - Unified `Store` interface enabling multiple persistence layers.  
@@ -100,9 +102,9 @@ This is an implementation of a Network Block Device (NBD) server that durably pe
 - **Interface:** `internal/store/types.go:15–19`
 
 #### 3. Concurrent Connection Support
-- Each NBD connection runs in its own **goroutine** with an independent `FileDevice` instance.  
-- **Thread-safe** operation ensured via mutex protection.  
-- **Implementation:** `internal/nbd/server.go:53–68`
+- Each NBD connection runs in its own **goroutine** with an independent `MemDevice` instance.
+- **Thread-safe** operation ensured via mutex protection.
+- **Implementation:** `internal/nbd/server.go:53–72`
 
 #### 4. Operational Logging
 - Logs **flush** and **write** operations for visibility and debugging.  
@@ -123,8 +125,7 @@ internal/
 
   core/
     core.go            # Device interface
-    filedev.go         # Page cache implementation
-    memdev.go          # In-memory device (legacy)
+    memdev.go          # Page cache implementation with batch flushing
 
   store/
     types.go           # Store interface definition

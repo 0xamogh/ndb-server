@@ -34,8 +34,10 @@ func main() {
 		S3SecretKey: *s3SecretKey,
 	}
 
-	if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
-		log.Fatalf("mkdir %s: %v", cfg.DataDir, err)
+	if cfg.S3Bucket == "" {
+		if err := os.MkdirAll(cfg.DataDir, 0o755); err != nil {
+			log.Fatalf("mkdir %s: %v", cfg.DataDir, err)
+		}
 	}
 
 	if err := nbd.Run(cfg); err != nil {

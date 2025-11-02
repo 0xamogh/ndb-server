@@ -61,7 +61,7 @@ func Run(cfg Config) error {
 			defer c.Close()
 
 			newDevice := func(name string, size uint64) core.Device {
-				return core.NewFileDevice(name, int64(size), cfg.ChunkSize, st)
+				return core.NewMemDevice(name, int64(size), cfg.ChunkSize, st)
 			}
 
 			if err := ServeConn(c, cfg, newDevice); err != nil {

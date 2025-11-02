@@ -82,11 +82,10 @@ func (s *S3Store) ReadPage(ctx context.Context, addr PageAddress) ([]byte, error
 	defer result.Body.Close()
 
 	buf := make([]byte, addr.Size)
-	n, err := io.ReadFull(result.Body, buf)
+	_, err = io.ReadFull(result.Body, buf)
 	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
 		return nil, fmt.Errorf("s3 read %s: %w", key, err)
 	}
-	_ = n
 
 	return buf, nil
 }

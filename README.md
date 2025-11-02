@@ -177,11 +177,12 @@ type Store interface {
 
 ### Page Cache
 
-The `FileDevice` implements a write-back cache:
+The `MemDevice` implements a write-back cache:
 - Pages are loaded lazily on first read
 - Writes update the in-memory cache and mark pages dirty
 - Flush commands write dirty pages to the storage backend
 - Non-existent pages return zeros
+- Proper read-modify-write for partial page updates
 
 
 ### Dependencies
